@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>ms-if</title>
+    <script src="src/aaObserver.js"></script>
+    <script src="src/core.js"></script>
+</head>
+<body>
+
+<div ms-controller="box">
+    <div style=" background: #a9ea00;" ms-css-width="w" ms-css-height="h"  ms-click="click"></div>
+    <p>{{ w }}</p>
+</div>
+
+<script type="text/javascript">
+
+    MVVM.define("box", function(vm) {
+        vm.w = 100;
+    })
+
+</script>
+</body>
+</html>
