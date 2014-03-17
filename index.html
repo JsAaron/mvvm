@@ -8,8 +8,7 @@
 </head>
 <body>
 
-<div ms-controller="box">
-    <div style=" background: #a9ea00;" ms-css-width="w" ms-css-height="h"  ms-click="click"></div>
+<div id='box' ao-controller="box">
     <p>{{ w }}</p>
 </div>
 
@@ -18,6 +17,9 @@
     MVVM.define("box", function(vm) {
         vm.w = 100;
     })
+
+    //节点扫描,执行绑定
+    MVVM.scanTag(document.getElementById('box'));
 
 </script>
 </body>

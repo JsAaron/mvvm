@@ -7,15 +7,15 @@
  *          	 blog:http://www.cnblogs.com/aaronjs/
  *****************************************************************/
 
+var prefix = 'ao-'; //命名私有前缀
 var subscribers = 'aaron-' + Date.now();
+
 
 var MVVM = function() {};
 
-
+var VMODELS = MVVM.vmodels = {};
 MVVM.define = function(name, factory) {
-	var access,
-		vModel = {}, //真正的视图模型对象
-		scope = {};
+	var scope = {};
 
 	//通过执行函数,把函数内部vm的属性全都通过内部scope挂载
 	//    vm.w = 100;
@@ -27,16 +27,20 @@ MVVM.define = function(name, factory) {
 	//	  此时 w,h,click的上下文很明显是指向了 scope
 	factory(scope);
 
-	//转成监控属性
-	access = conversionAccess(scope);
-
-	//转成访问控制器
-	vModel = Object.defineProperties(vModel, withValue(access));
-
-	aaObserver.call(vModel);
-
-	console.log(vModel)
+	//生成带get set控制器与自定义事件能力的vm对象
+	var model = modelFactory(scope);
+	model.$id = name;
+	return VMODELS[name] = model;
 };
+
+function modelFactory(scope) {
+	var access, vModel = {}; //真正的视图模型对象
+	access = conversionAccess(scope); //转成监控属性
+	vModel = Object.defineProperties(vModel, withValue(access)); //转成访问控制器
+	aaObserver.call(vModel); //赋予自定义事件能力
+	return vModel
+}
+
 
 //转成访问控制器
 //set or get
@@ -48,11 +52,11 @@ function conversionAccess(scope) {
 		}
 	    accessor[subscribers] = [] //订阅者数组
 	}
-
 	return objAccess;
 }
 
-// 回收同一对象
+
+//创建对象访问规则
 function withValue(access) {
     var descriptors = {}
     for (var i in access) {
@@ -65,6 +69,62 @@ function withValue(access) {
     }
     return descriptors
 }
+
+
+//======================节点绑定============================
+
+MVVM.scanTag = function(element, vModel) {
+
+	//扫描节点是controller域
+	var c = element.getAttributeNode(prefix + "controller")
+
+	element.removeAttribute(prefix + "controller")
+
+	var vModel = VMODELS[c.textContent]
+
+	scanAttr(element, vModel) //扫描特性节点
+}
+
+//执行绑定
+function executeBindings(bindings, vmodels){
+
+}
+
+
+//扫描属性节点
+function scanAttr(element, vModel){
+	var attributes = element.attributes
+	var bindings = [];
+
+	for (var i = 0, attr; attr = attributes[i++];) {
+		//http://www.zeali.net/entry/388
+		if (attr.specified) { //提高筛选的性能,判断是否设了值
+			// console.log(attr)
+		}
+
+	}
+
+	executeBindings(bindings, vModel); //执行绑定
+
+	scanNodes(element, vModel) //扫描子孙元素
+}
+
+//扫描子节点
+function scanNodes(parent, vModel) {
+	var node = parent.firstChild;
+    while (node) {
+        var nextNode = node.nextSibling
+		if (node.nodeType === 1) {
+			scanTag(node, vmodels) //扫描元素节点
+		} else if (node.nodeType === 3) {
+			scanText(node, vmodels) //扫描文本节点
+		}
+        node = nextNode
+    }
+}
+
+
+
 
 
 
