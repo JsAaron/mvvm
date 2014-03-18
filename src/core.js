@@ -115,14 +115,18 @@ function scanNodes(parent, vModel) {
     while (node) {
         var nextNode = node.nextSibling
 		if (node.nodeType === 1) {
-			scanTag(node, vmodels) //扫描元素节点
+			scanTag(node, vModel) //扫描元素节点
 		} else if (node.nodeType === 3) {
-			scanText(node, vmodels) //扫描文本节点
+			scanText(node, vModel) //扫描文本节点
 		}
         node = nextNode
     }
 }
 
+//扫描文本节点
+function scanText(){
+
+}
 
 
 
