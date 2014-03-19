@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>aaMVVM</title>
+    <title>MVVM学习之旅</title>
     <script src="src/jQuery.js"></script>
     <script src="src/aaObserver.js"></script>
     <script src="src/core.js"></script>
@@ -10,14 +10,14 @@
 <body>
 
 <div id='box' ao-controller="box">
-    <div id='aa-attr' style="background: #a9ea00;width:100px;height:100px;" ao-css-width="w"  ></div>
+    <div id='aa-attr' style="background: #a9ea00;width:100px;height:100px;" ao-css-width="w" ao-click='click' ></div>
     <p id='aa-text'>{{ w }}</p>
 </div>
 
 <script type="text/javascript">
 
     MVVM.define("box", function(vm) {
-        vm.w = 100;
+        vm.w = 150;
         vm.click = function() {
             vm.w = parseFloat(vm.w) + 10;
         }

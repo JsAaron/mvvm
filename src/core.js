@@ -7,124 +7,255 @@
  *          	 blog:http://www.cnblogs.com/aaronjs/
  *****************************************************************/
 
-var prefix = 'ao-'; //命名私有前缀
-var expose = Date.now();
-var subscribers = 'aaron-' + expose;
+
+(function(){
+	var Registry = {} //将函数曝光到此对象上，方便访问器收集依赖
+	var prefix = 'ao-'; //命名私有前缀
+	var expose = Date.now();
+	var subscribers = 'aaron-' + expose;
+	var stopRepeatAssign = false
+	function noop() {}
+
+	MVVM = function() {};
+
+	var VMODELS = MVVM.vmodels = {};
+	MVVM.define = function(name, factory) {
+		var scope = {
+			// 'subscribe': noop
+		}
+		factory(scope);
+		//生成带get set控制器与自定义事件能力的vm对象
+		var model = modelFactory(scope);
+		stopRepeatAssign = true
+		factory(model)
+		stopRepeatAssign = false;
+		model.$id = name;
+		return VMODELS[name] = model;
+	};
+
+	function modelFactory(scope) {
+		var vModel = {}, //真正的视图模型对象
+			originalModel = {}; //原始模型数据
+
+		var accessingProperties = {}; //监控属性,转化成set get访问控制器
+		var watchProperties = arguments[2] || {} //强制要监听的属性
+	 	var normalProperties = {} //普通属性
+
+		//分解创建句柄
+		for (var k in scope) {
+			resolveAccess(k, scope[k], originalModel, normalProperties, accessingProperties, watchProperties);
+		}
+
+		//转成访问控制器
+		vModel = Object.defineProperties(vModel, withValue(accessingProperties));
+
+		//没有转化的函数,混入到新的vm对象中
+	    for (var name in normalProperties) {
+	        vModel[name] = normalProperties[name]
+	    }
+
+		watchProperties.vModel = vModel
+		aaObserver.call(vModel); //赋予自定义事件能力
+	 	vModel.$id = generateID()
+	 	vModel.$accessors = accessingProperties
+		vModel.$originalModel = originalModel; //原始值
+		vModel[subscribers] = []
+		return vModel
+	}
+
+	//转成访问控制器
+	//set or get
+	function resolveAccess(name, val, originalModel, normalProperties, accessingProperties, watchProperties) {
+
+		//缓存原始值
+		originalModel[name] = val
+
+		var valueType = $.type(val);
+
+		//如果是函数，不用监控
+		if (valueType === 'function') {
+			return normalProperties[name] = val
+		}
+
+		var accessor, oldArgs
+
+		if (valueType === 'number') {
+			//创建监控属性或数组，自变量，由用户触发其改变
+			accessor = function(newValue){
+				var vmodel = watchProperties.vModel
+				var preValue = originalModel[name];
+				if (arguments.length) { //set
+					if (stopRepeatAssign) {
+						return //阻止重复赋值
+					}
+
+					alert(newValue)
+				} else { //get
+					collectSubscribers(accessor) //收集视图函数
+					return accessor.$vmodel || preValue //返回需要获取的值
+				}
+			};
+			accessor[subscribers] = [] //订阅者数组
+			originalModel[name] = val
+		}
+
+		//保存监控处理
+		accessingProperties[name] = accessor
+	}
 
 
-var MVVM = function() {};
+	function collectSubscribers(accessor) { //收集依赖于这个访问器的订阅者
+		if (Registry[expose]) { //只有当注册了才收集
+			var list = accessor[subscribers]
+			list && ensure(list, Registry[expose]) //只有数组不存在此元素才push进去
+		}
+	}
 
-var VMODELS = MVVM.vmodels = {};
-MVVM.define = function(name, factory) {
-	var scope = {};
-	factory(scope);
-	//生成带get set控制器与自定义事件能力的vm对象
-	var model = modelFactory(scope);
-	model.$id = name;
-	return VMODELS[name] = model;
-};
+	function ensure(target, item) {
+		//只有当前数组不存在此元素时只添加它
+		if (target.indexOf(item) === -1) {
+			target.push(item)
+		}
+		return target;
+	}
 
-function modelFactory(scope) {
-	var access,
-		vModel = {}, //真正的视图模型对象
-		originalModel = {}; //原始模型数据
 
-	access = conversionAccess(scope, originalModel); //转成监控属性
-	vModel = Object.defineProperties(vModel, withValue(access)); //转成访问控制器
-	aaObserver.call(vModel); //赋予自定义事件能力
-	vModel.$model = originalModel;
-	return vModel
-}
+	//创建对象访问规则
+	function withValue(access) {
+	    var descriptors = {}
+	    for (var i in access) {
+	        descriptors[i] = {
+				get          : access[i],
+				set          : access[i],
+				enumerable   : true,
+				configurable : true
+	        }
+	    }
+	    return descriptors
+	}
 
-//转成访问控制器
-//set or get
-function conversionAccess(scope, originalModel) {
-	var objAccess = {};
 
-	for (var k in scope) {
+	function generateID() {
+	    return "aaron" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+	}
 
-		//缓存原始数据
-		originalModel[k] = scope[k]
 
-		accessor = objAccess[k] = function(setValue) { //set,get访问控制器
+	//======================节点绑定============================
 
-			//上一个值
-			var preValue = originalModel[k];
-
-			//set
-			if (arguments.length) {
-
-			} else { //get
-				return accessor.$vmodel || preValue
+	var scanTag = MVVM.scanTag = function(element, vModel) {
+		var div = document.getElementById('aa-attr');
+		var p = document.getElementById('aa-text');
+		var attrs = div.attributes;
+		var bindings = [];//存储绑定数据
+		$.each(attrs, function(index, ele) {
+			var match;
+			if (match = ele.name.match(/ao-(\w+)-?(.*)/)) {
+				//如果是以指定前缀命名的
+				var type = match[1]
+	            var param = match[2] || ""
+	            var binding = {
+					type    : type,
+					param   : param,
+					element : div,
+					name    : match[0],
+					value   : ele.value
+	            }
+	            bindings.push(binding)
 			}
-		}
-	    accessor[subscribers] = [] //订阅者数组
+		})
+		executeBindings(bindings,VMODELS['box'])
 	}
-	return objAccess;
-}
 
-//创建对象访问规则
-function withValue(access) {
-    var descriptors = {}
-    for (var i in access) {
-        descriptors[i] = {
-			get          : access[i],
-			set          : access[i],
-			enumerable   : true,
-			configurable : true
-        }
+
+	//执行绑定
+	function executeBindings(bindings, vModel){
+		$.each(bindings,function(i,data){
+			parseExprProxy(data,vModel)
+		})
+	}
+
+
+	function parseExprProxy(data,vModel){
+		data.args = vModel;
+		parseExpr(data, vModel)
+		//如果存在求值函数
+		if (data.evaluator) {
+			//找到对应的处理句柄
+			data.handler = bindingExecutors[data.type];
+			data.evaluator.toString = function() {
+				return data.type + " binding to eval(" + code + ")"
+			}
+			//方便调试
+			//这里非常重要,我们通过判定视图刷新函数的element是否在DOM树决定
+			//将它移出订阅者列表
+			registerSubscriber(data)
+		}
+	}
+
+    /*********************************************************************
+     *                         依赖收集与触发                             *
+     **********************************************************************/
+
+    function registerSubscriber(data) {
+        Registry[expose] = data //暴光此函数,方便collectSubscribers收集
+        MVVM.openComputedCollect = true //针对函数类型的求值处理,不进行get
+		if (data.evaluator) { //如果是求值函数
+			data.handler(data.evaluator(data.args), data.element, data)
+		}
+        MVVM.openComputedCollect = false
+        delete Registry[expose]
     }
-    return descriptors
-}
 
 
-//======================节点绑定============================
+	//生成求值函数与
+	//视图刷新函数
+	function parseExpr(data,vModel){
+		var dataType = data.type
+		var name = "vm" + expose;
+		var prefix = "var " + data.value + " = " + name + "." + data.value;
 
-var scanTag = MVVM.scanTag = function(element, vModel) {
-	var div = document.getElementById('aa-attr');
-	var p = document.getElementById('aa-text');
-	var attrs = div.attributes;
-	var bindings = [];//存储绑定数据
-	$.each(attrs, function(index, ele) {
-		var match;
-		if (match = ele.name.match(/ao-(\w+)-?(.*)/)) {
-			//如果是以指定前缀命名的
-			var type = match[1]
-            var param = match[2] || ""
-            var binding = {
-				type    : type,
-				param   : param,
-				element : div,
-				name    : match[0],
-				value   : ele.value
-            }
-            bindings.push(binding)
+		//绑定类型
+		if (dataType === 'click') {
+			code = 'click'
+			code = code.replace("(", ".call(this,");
+            code = "\nreturn " + code + ";" //IE全家 Function("return ")出错，需要Function("return ;")
+            var lastIndex = code.lastIndexOf("\nreturn")
+            var header = code.slice(0, lastIndex)
+            var footer = code.slice(lastIndex)
+			code = header + "\nif(MVVM.openComputedCollect) return ;" + footer;
+			var fn = Function.apply(Function, [name].concat("'use strict';\n" + prefix + ";" + code))
+		} else {
+			var code = "\nreturn " + data.value + ";";
+			var fn = Function.apply(Function, [name].concat("'use strict';\n" + prefix + ";" + code))
+			fn.call(fn, vModel)
 		}
-	})
-	executeBindings(bindings,VMODELS['box'])
-}
 
-
-//执行绑定
-function executeBindings(bindings, vModel){
-	$.each(bindings,function(i,data){
-		parseExpr(data,vModel)
-	})
-}
-
-//生成求值函数与视图刷新函数
-function parseExpr(data,vModel){
-	console.log(data,vModel)
-	var name = "vm" + expose;
-	var prefix = "var " + data.value + " = " + name + "." + data.value;
-	var code = "\nreturn " + data.value + ";";
-	var fn = Function.apply(Function, [name].concat("'use strict';\n" + prefix + ";" + code))
-	if (data.type !== "on") {
-		fn.call(fn, vModel)
+		//生成求值函数
+		data.evaluator = fn;
 	}
-}
 
+	//处理句柄
+	var bindingExecutors = {
+		//修改css
+		css: function(val, elem, data) {
+			var method = data.type,
+				attrName = data.param;
+			$(elem).css(attrName, val)
+		},
+        click: function(val, elem, data) {
+            var fn = data.evaluator
+            var args = data.args
+            var vmodels = data.vmodels
+			var callback = function(e) {
+				return fn(args).call(this, e)
+			}
+			elem.addEventListener('click', callback, false)
 
+            data.evaluator = data.handler = noop
+        },
+	}
+
+})();
 
 
 
