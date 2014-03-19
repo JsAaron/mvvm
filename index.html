@@ -3,19 +3,24 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>aaMVVM</title>
+    <script src="src/jQuery.js"></script>
     <script src="src/aaObserver.js"></script>
     <script src="src/core.js"></script>
 </head>
 <body>
 
 <div id='box' ao-controller="box">
-    <p>{{ w }}</p>
+    <div id='aa-attr' style="background: #a9ea00;width:100px;height:100px;" ao-css-width="w"  ></div>
+    <p id='aa-text'>{{ w }}</p>
 </div>
 
 <script type="text/javascript">
 
     MVVM.define("box", function(vm) {
         vm.w = 100;
+        vm.click = function() {
+            vm.w = parseFloat(vm.w) + 10;
+        }
     })
 
     //节点扫描,执行绑定
