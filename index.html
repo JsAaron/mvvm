@@ -16,15 +16,20 @@
 
 <script type="text/javascript">
 
-    MVVM.define("box", function(vm) {
+    var mm = MVVM.define("box", function(vm) {
         vm.w = 150;
         vm.click = function() {
             vm.w = parseFloat(vm.w) + 10;
         }
     })
 
-    //节点扫描,执行绑定
-    MVVM.scanTag(document.getElementById('box'));
+    // //节点扫描,执行绑定
+    MVVM.scanTag();
+
+    setTimeout(function(){
+        console.log(mm)
+    },100)
+
 
 </script>
 </body>

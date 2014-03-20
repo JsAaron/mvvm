@@ -20,18 +20,22 @@
 
 	var VMODELS = MVVM.vmodels = {};
 	MVVM.define = function(name, factory) {
-		var scope = {
-			// 'subscribe': noop
-		}
+		var scope = {};
+		//收集所有定义
 		factory(scope);
+
 		//生成带get set控制器与自定义事件能力的vm对象
 		var model = modelFactory(scope);
+
+		//改变函数引用变成转化后vm对象,而不是scope对象
 		stopRepeatAssign = true
 		factory(model)
 		stopRepeatAssign = false;
+
 		model.$id = name;
 		return VMODELS[name] = model;
 	};
+
 
 	function modelFactory(scope) {
 		var vModel = {}, //真正的视图模型对象
@@ -88,8 +92,12 @@
 					if (stopRepeatAssign) {
 						return //阻止重复赋值
 					}
-
-					alert(newValue)
+					//确定是新设置值
+					if (!isEqual(preValue, newValue)) {
+						originalModel[name] = newValue //更新$model中的值
+						//自身的依赖更新
+						notifySubscribers(accessor);
+					}
 				} else { //get
 					collectSubscribers(accessor) //收集视图函数
 					return accessor.$vmodel || preValue //返回需要获取的值
@@ -103,8 +111,21 @@
 		accessingProperties[name] = accessor
 	}
 
+	 //通知依赖于这个访问器的订阅者更新自身
+	function notifySubscribers(accessor) {
+		var list = accessor[subscribers]
+		if (list && list.length) {
+			var args = [].slice.call(arguments, 1)
+			for (var i = list.length, fn; fn = list[--i];) {
+				var el = fn.element
+				fn.handler(fn.evaluator.apply(0, fn.args || []), el, fn)
+			}
+		}
+	}
 
-	function collectSubscribers(accessor) { //收集依赖于这个访问器的订阅者
+
+	//收集依赖于这个访问器的订阅者
+	function collectSubscribers(accessor) {
 		if (Registry[expose]) { //只有当注册了才收集
 			var list = accessor[subscribers]
 			list && ensure(list, Registry[expose]) //只有数组不存在此元素才push进去
@@ -170,14 +191,17 @@
 	//执行绑定
 	function executeBindings(bindings, vModel){
 		$.each(bindings,function(i,data){
-			parseExprProxy(data,vModel)
+			bindingHandlers[data.type](data, vModel)
+			if (data.evaluator && data.name) { //移除数据绑定，防止被二次解析
+				//chrome使用removeAttributeNode移除不存在的特性节点时会报错 https://github.com/RubyLouvre/avalon/issues/99
+				data.element.removeAttribute(data.name)
+			}
 		})
 	}
 
 
-	function parseExprProxy(data,vModel){
-		data.args = vModel;
-		parseExpr(data, vModel)
+	function parseExprProxy(code, scopes, data){
+		parseExpr(code, scopes, data)
 		//如果存在求值函数
 		if (data.evaluator) {
 			//找到对应的处理句柄
@@ -192,49 +216,62 @@
 		}
 	}
 
+	//生成求值函数与
+	//视图刷新函数
+	function parseExpr(code, scopes, data){
+		var dataType = data.type
+		var name = "vm" + expose;
+		var prefix = "var " + data.value + " = " + name + "." + data.value;
+		data.args = [scopes];
+		//绑定类型
+		if (dataType === 'click') {
+			code = 'click'
+			code = code.replace("(", ".call(this,");
+			code = "\nreturn " + code + ";" //IE全家 Function("return ")出错，需要Function("return ;")
+			var lastIndex = code.lastIndexOf("\nreturn")
+			var header = code.slice(0, lastIndex)
+			var footer = code.slice(lastIndex)
+			code = header + "\nif(MVVM.openComputedCollect) return ;" + footer;
+			var fn = Function.apply(noop, [name].concat("'use strict';\n" + prefix + ";" + code))
+		} else {
+			var code = "\nreturn " + data.value + ";";
+			var fn = Function.apply(noop, [name].concat("'use strict';\n" + prefix + ";" + code))
+		}
+		//生成求值函数
+		data.evaluator = fn;
+	}
+
+
     /*********************************************************************
      *                         依赖收集与触发                             *
      **********************************************************************/
-
     function registerSubscriber(data) {
         Registry[expose] = data //暴光此函数,方便collectSubscribers收集
-        MVVM.openComputedCollect = true //针对函数类型的求值处理,不进行get
-		if (data.evaluator) { //如果是求值函数
-			data.handler(data.evaluator(data.args), data.element, data)
+        MVVM.openComputedCollect = true //排除事件处理函数
+        var fn = data.evaluator
+		if (fn) { //如果是求值函数
+			data.handler(fn.apply(0, data.args), data.element, data)
 		}
         MVVM.openComputedCollect = false
         delete Registry[expose]
     }
 
-
-	//生成求值函数与
-	//视图刷新函数
-	function parseExpr(data,vModel){
-		var dataType = data.type
-		var name = "vm" + expose;
-		var prefix = "var " + data.value + " = " + name + "." + data.value;
-
-		//绑定类型
-		if (dataType === 'click') {
-			code = 'click'
-			code = code.replace("(", ".call(this,");
-            code = "\nreturn " + code + ";" //IE全家 Function("return ")出错，需要Function("return ;")
-            var lastIndex = code.lastIndexOf("\nreturn")
-            var header = code.slice(0, lastIndex)
-            var footer = code.slice(lastIndex)
-			code = header + "\nif(MVVM.openComputedCollect) return ;" + footer;
-			var fn = Function.apply(Function, [name].concat("'use strict';\n" + prefix + ";" + code))
-		} else {
-			var code = "\nreturn " + data.value + ";";
-			var fn = Function.apply(Function, [name].concat("'use strict';\n" + prefix + ";" + code))
-			fn.call(fn, vModel)
+	var bindingHandlers = {
+		css: function(data, vModel) {
+			var text = data.value.trim();
+				data.handlerName = "attr" //handleName用于处理多种绑定共用同一种bindingExecutor的情况
+			parseExprProxy(text, vModel, data)
+		},
+		click: function(data, vModel) {
+			var value = data.value
+			data.type = "on"
+			data.hasArgs = void 0
+			data.handlerName = "on"
+			parseExprProxy(value, vModel, data)
 		}
-
-		//生成求值函数
-		data.evaluator = fn;
 	}
 
-	//处理句柄
+	//执行最终的处理代码
 	var bindingExecutors = {
 		//修改css
 		css: function(val, elem, data) {
@@ -242,20 +279,62 @@
 				attrName = data.param;
 			$(elem).css(attrName, val)
 		},
-        click: function(val, elem, data) {
+        on: function(val, elem, data) {
             var fn = data.evaluator
             var args = data.args
             var vmodels = data.vmodels
 			var callback = function(e) {
-				return fn(args).call(this, e)
+				return fn.apply(0,args).call(this, e)
 			}
 			elem.addEventListener('click', callback, false)
-
             data.evaluator = data.handler = noop
-        },
+        }
 	}
 
+
+
+
+
+
+
+
+    var isEqual = Object.is || function(v1, v2) {
+        if (v1 === 0 && v2 === 0) {
+            return 1 / v1 === 1 / v2
+        } else if (v1 !== v1) {
+            return v2 !== v2
+        } else {
+            return v1 === v2;
+        }
+    }
+
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
