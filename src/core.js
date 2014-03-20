@@ -185,6 +185,15 @@
 			}
 		})
 		executeBindings(bindings,VMODELS['box'])
+
+		//解析文本类型
+		executeBindings([{
+			filters: undefined,
+			element: document.getElementById('aa-text'),
+			nodeType: 3,
+			type: "text",
+			value: " w "
+		}], VMODELS['box'])
 	}
 
 
@@ -268,6 +277,9 @@
 			data.hasArgs = void 0
 			data.handlerName = "on"
 			parseExprProxy(value, vModel, data)
+		},
+		text: function(data, vModel) {
+			parseExprProxy(data.value, vModel, data)
 		}
 	}
 
@@ -288,14 +300,11 @@
 			}
 			elem.addEventListener('click', callback, false)
             data.evaluator = data.handler = noop
-        }
+        },
+		text: function(val, elem, data) {
+			$(elem).text(val)
+		}
 	}
-
-
-
-
-
-
 
 
     var isEqual = Object.is || function(v1, v2) {
@@ -309,125 +318,3 @@
     }
 
 })();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//==============================参考========================================
-
-//扫描属性节点
-function scanAttr(element, vModel){
-	var attributes = element.attributes
-	var bindings = [];
-
-	for (var i = 0, attr; attr = attributes[i++];) {
-		//http://www.zeali.net/entry/388
-		if (attr.specified) { //提高筛选的性能,判断是否设了值
-			// console.log(attr)
-		}
-	}
-	executeBindings(bindings, vModel); //执行绑定
-	scanNodes(element, vModel) //扫描子孙元素
-}
-
-//扫描子节点
-function scanNodes(parent, vModel) {
-	var node = parent.firstChild;
-    while (node) {
-        var nextNode = node.nextSibling
-		if (node.nodeType === 1) {
-			scanTag(node, vModel) //扫描元素节点
-		} else if (node.nodeType === 3) {
-			scanText(node, vModel) //扫描文本节点
-		}
-        node = nextNode
-    }
-}
-
-//扫描文本节点
-function scanText(){
-
-}
-
-
-//等价Object.defineProperties方法的实现
-//	https://developer.mozilla.org/zh-CN/docs/JavaScript/Reference/Global_Objects/Object/defineProperty
-//	http://ejohn.org/blog/ecmascript-5-objects-and-properties/
-function defineProperties(obj, properties) {
-	function convertToDescriptor(desc) {
-		function hasProperty(obj, prop) {
-			return Object.prototype.hasOwnProperty.call(obj, prop);
-		}
-
-		function isCallable(v) {
-			// 如果除函数以外,还有其他类型的值也可以被调用,则可以修改下面的语句
-			return typeof v === "function";
-		}
-		if (typeof desc !== "object" || desc === null)
-			throw new TypeError("不是正规的对象");
-		var d = {};
-		if (hasProperty(desc, "enumerable"))
-			d.enumerable = !! obj.enumerable;
-		if (hasProperty(desc, "configurable"))
-			d.configurable = !! obj.configurable;
-		if (hasProperty(desc, "value"))
-			d.value = obj.value;
-		if (hasProperty(desc, "writable"))
-			d.writable = !! desc.writable;
-		if (hasProperty(desc, "get")) {
-			var g = desc.get;
-			if (!isCallable(g) && g !== "undefined")
-				throw new TypeError("bad get");
-			d.get = g;
-		}
-		if (hasProperty(desc, "set")) {
-			var s = desc.set;
-			if (!isCallable(s) && s !== "undefined")
-				throw new TypeError("bad set");
-			d.set = s;
-		}
-
-		if (("get" in d || "set" in d) && ("value" in d || "writable" in d))
-			throw new TypeError("identity-confused descriptor");
-		return d;
-	}
-
-	if (typeof obj !== "object" || obj === null)
-		throw new TypeError("不是正规的对象");
-
-	properties = Object(properties);
-	var keys = Object.keys(properties);
-	var descs = [];
-	for (var i = 0; i < keys.length; i++)
-		descs.push([keys[i], convertToDescriptor(properties[keys[i]])]);
-	for (var i = 0; i < descs.length; i++)
-		Object.defineProperty(obj, descs[i][0], descs[i][1]);
-
-	return obj;
-}
