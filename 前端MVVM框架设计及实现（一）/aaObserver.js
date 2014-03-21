@@ -1,6 +1,6 @@
 
 /****************************************************************
-* 		 ¼òµ¥µÄ×Ô¶¨ÒåÊÂ¼ş£¬¹Û²ìÕßÄ£Ê½
+* 		 ç®€å•çš„è‡ªå®šä¹‰äº‹ä»¶ï¼Œè§‚å¯Ÿè€…æ¨¡å¼
 * 		 @by Aaron
 *          	 github:https://github.com/JsAaron/aaObserver
 *          	 blog:http://www.cnblogs.com/aaronjs/
@@ -18,11 +18,11 @@
 
 	function each(obj, callback, context) {
 		if (obj == null) return;
-		//Èç¹ûÖ§³Ö±¾µØforEach·½·¨,²¢ÇÒÊÇº¯Êı
+		//å¦‚æœæ”¯æŒæœ¬åœ°forEachæ–¹æ³•,å¹¶ä¸”æ˜¯å‡½æ•°
 		if (nativeForEach && obj.forEach === nativeForEach) {
 			obj.forEach(callback, context);
 		} else if (obj.length === +obj.length) {
-			//forÑ­»·µü´ú
+			//forå¾ªç¯è¿­ä»£
 			for (var i = 0, l = obj.length; i < l; i++) {
 				callback.call(context, obj[i], i, obj);
 			}
@@ -59,7 +59,7 @@
 		each(parts, function(eventName, index) {
 			if (eventName in events !== false) {
 				events[eventName].splice(events[eventName].indexOf(fn), 1);
-				if (!events[eventName].length) { //ĞŞÕıÃ»ÓĞÊÂ¼şÖ±½ÓÉ¾³ı¿ÕÊı×é
+				if (!events[eventName].length) { //ä¿®æ­£æ²¡æœ‰äº‹ä»¶ç›´æ¥åˆ é™¤ç©ºæ•°ç»„
 					delete events[eventName];
 				}
 			}
@@ -75,7 +75,7 @@
 		for (i = events[event].length - 1; i >= 0; i--) {
 			falg = events[event][i].apply(this, args);
 		}
-		return falg; //ĞŞÕı´ø·µ»Ø
+		return falg; //ä¿®æ­£å¸¦è¿”å›
 	}
 
 	return function() {
