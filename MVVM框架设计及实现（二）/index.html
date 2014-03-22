@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>MVVM学习之旅</title>
+    <script src="../jQuery.js"></script>
+    <script src="aaObserver.js"></script>
+    <script src="core.js"></script>
+</head>
+<body>
+
+<div id='box' ao-controller="box">
+    <div id='aa-attr' style="background: #a9ea00;width:100px;height:100px;" ao-css-width="w" ao-click='click' ></div>
+    <p id='aa-text'>{{ w }}</p>
+</div>
+
+<script type="text/javascript">
+
+    var mm = MVVM.define("box", function(vm) {
+        vm.w = 150;
+        vm.click = function() {
+            vm.w = parseFloat(vm.w) + 10;
+        }
+    })
+
+    // //节点扫描,执行绑定
+    MVVM.scanTag();
+
+    setTimeout(function(){
+        console.log(mm)
+    },100)
+
+
+</script>
+</body>
+</html>
