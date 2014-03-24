@@ -90,9 +90,7 @@ function parseModel(name, val, originalModel, normalProperties, accessingPropert
 		return normalProperties[name] = val
 	}
 	//如果值类型是对象,并且有get方法,为计算属性
-	if (valueType === "object"
-		&& typeof val.get === "function"
-		&& Object.keys(val).length <= 2) {
+	if (valueType === "object" && typeof val.get === "function" && Object.keys(val).length <= 2) {
 
 	} else {
 		//否则为监控属性
@@ -135,7 +133,7 @@ function createAccessingProperties(valueType, originalModel, name, val, watchPro
 		var complexValue = modelFactory(val, val);
 		accessor._vmodel = complexValue;
 		originalModel[name] = complexValue._model
-	}else{
+	} else {
 		//普通的基本类型
 		originalModel[name] = val;
 	}

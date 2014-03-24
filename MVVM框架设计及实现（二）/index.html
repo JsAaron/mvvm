@@ -4,6 +4,8 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>MVVM学习之旅</title>
     <script src="jQuery.js"></script>
+    <script src="underscore.js"></script>
+
     <script src="Observer.js"></script>
     <script src="Core.js"></script>
     <script src="Template.js"></script>
@@ -13,7 +15,7 @@
 
 <div id='box' ao-controller="box">
     <div id='aa-attr' style="background: #a9ea00;width:100px;height:100px;" ao-css-width="w" ao-click='click' ></div>
-    <p id='aa-text'>{{ w }}</p>
+    <p>{{ w }} x {{ h }} z {{p}}</p>
 </div>
 
 <script type="text/javascript">
