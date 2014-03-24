@@ -1,13 +1,13 @@
 /****************************************************************
  * 		 前端MVVM框架的实现
- * 		 	第二弹：视图模型复杂监控数据, 数组对象的处理
+ * 		 	第二弹：DOM模块化模板引擎
  * 		 @by Aaron
  *          	源码分析博客:http://www.cnblogs.com/aaronjs/
  *          	源码分析Github:https://github.com/JsAaron/aaMVVM
  *          	Avalon源码:https://github.com/RubyLouvre/avalon
  *       DOM的处理前期全采用jQuery代替
  *****************************************************************/
-
+var root = document.documentElement;
 var Registry = {} //将函数曝光到此对象上，方便访问器收集依赖
 var prefix = 'ao-'; //命名私有前缀
 var expose = Date.now();
@@ -34,7 +34,6 @@ MVVM.define = function(name, factory) {
 	model._id = name;
 	return VMODELS[name] = model;
 };
-
 
 //===============================================
 //	数据源转化工厂,元数据转转成视图模型对象
@@ -111,22 +110,22 @@ function parseModel(name, val, originalModel, normalProperties, accessingPropert
 //====================================================
 function createAccessingProperties(valueType, originalModel, name, val, watchProperties) {
 	var accessor = function(newValue) {
-		// var vmodel = watchProperties.vmodel
-		// var preValue = originalModel[name];
-		// if (arguments.length) { //set
-		// 	if (stopRepeatAssign) {
-		// 		return //阻止重复赋值
-		// 	}
-		// 	//确定是新设置值
-		// 	if (!isEqual(preValue, newValue)) {
-		// 		originalModel[name] = newValue //更新$model中的值
-		// 		//自身的依赖更新
-		// 		notifySubscribers(accessor);
-		// 	}
-		// } else { //get
-		// 	collectSubscribers(accessor) //收集视图函数
-		// 	return accessor.$vmodel || preValue //返回需要获取的值
-		// }
+		var vmodel = watchProperties.vmodel
+		var preValue = originalModel[name];
+		if (arguments.length) { //set
+			if (stopRepeatAssign) {
+				return //阻止重复赋值
+			}
+			//确定是新设置值
+			if (!isEqual(preValue, newValue)) {
+				originalModel[name] = newValue //更新$model中的值
+				//自身的依赖更新
+				notifySubscribers(accessor);
+			}
+		} else { //get
+			collectSubscribers(accessor) //收集视图函数
+			return accessor.$vmodel || preValue //返回需要获取的值
+		}
 	};
 	accessor[subscribers] = [] //订阅者数组,保存所有的view依赖映射
 
@@ -192,109 +191,60 @@ function generateID() {
 	return "aaron" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
 }
 
-//======================节点绑定============================
-
-var scanTag = MVVM.scanTag = function(element, vmodel) {
-	var div = document.getElementById('aa-attr');
-	var p = document.getElementById('aa-text');
-	var attrs = div.attributes;
-	var bindings = []; //存储绑定数据
-	$.each(attrs, function(index, ele) {
-		var match;
-		if (match = ele.name.match(/ao-(\w+)-?(.*)/)) {
-			//如果是以指定前缀命名的
-			var type = match[1]
-			var param = match[2] || ""
-			var binding = {
-				type: type,
-				param: param,
-				element: div,
-				name: match[0],
-				value: ele.value
-			}
-			bindings.push(binding)
+function parseExprProxy(code, scopes, data) {
+	parseExpr(code, scopes, data)
+	//如果存在求值函数
+	if (data.evaluator) {
+		//找到对应的处理句柄
+		data.handler = bindingExecutors[data.type];
+		data.evaluator.toString = function() {
+			return data.type + " binding to eval(" + code + ")"
 		}
-	})
-	executeBindings(bindings, VMODELS['box'])
-
-	//解析文本类型
-	executeBindings([{
-		filters: undefined,
-		element: document.getElementById('aa-text'),
-		nodeType: 3,
-		type: "text",
-		value: " w "
-	}], VMODELS['box'])
+		//方便调试
+		//这里非常重要,我们通过判定视图刷新函数的element是否在DOM树决定
+		//将它移出订阅者列表
+		registerSubscriber(data)
+	}
 }
 
-//执行绑定
-
-	function executeBindings(bindings, vmodel) {
-		$.each(bindings, function(i, data) {
-			bindingHandlers[data.type](data, vmodel)
-			if (data.evaluator && data.name) { //移除数据绑定，防止被二次解析
-				//chrome使用removeAttributeNode移除不存在的特性节点时会报错 https://github.com/RubyLouvre/avalon/issues/99
-				data.element.removeAttribute(data.name)
-			}
-		})
+//生成求值函数与
+//视图刷新函数
+function parseExpr(code, scopes, data) {
+	var dataType = data.type
+	var name = "vm" + expose;
+	var prefix = "var " + data.value + " = " + name + "." + data.value;
+	data.args = [scopes];
+	//绑定类型
+	if (dataType === 'click') {
+		code = 'click'
+		code = code.replace("(", ".call(this,");
+		code = "\nreturn " + code + ";" //IE全家 Function("return ")出错，需要Function("return ;")
+		var lastIndex = code.lastIndexOf("\nreturn")
+		var header = code.slice(0, lastIndex)
+		var footer = code.slice(lastIndex)
+		code = header + "\nif(MVVM.openComputedCollect) return ;" + footer;
+		var fn = Function.apply(noop, [name].concat("'use strict';\n" + prefix + ";" + code))
+	} else {
+		var code = "\nreturn " + data.value + ";";
+		var fn = Function.apply(noop, [name].concat("'use strict';\n" + prefix + ";" + code))
 	}
+	//生成求值函数
+	data.evaluator = fn;
+}
 
-	function parseExprProxy(code, scopes, data) {
-		parseExpr(code, scopes, data)
-		//如果存在求值函数
-		if (data.evaluator) {
-			//找到对应的处理句柄
-			data.handler = bindingExecutors[data.type];
-			data.evaluator.toString = function() {
-				return data.type + " binding to eval(" + code + ")"
-			}
-			//方便调试
-			//这里非常重要,我们通过判定视图刷新函数的element是否在DOM树决定
-			//将它移出订阅者列表
-			registerSubscriber(data)
-		}
+/*********************************************************************
+ *                         依赖收集与触发                             *
+ **********************************************************************/
+function registerSubscriber(data) {
+	Registry[expose] = data //暴光此函数,方便collectSubscribers收集
+	MVVM.openComputedCollect = true //排除事件处理函数
+	var fn = data.evaluator
+	if (fn) { //如果是求值函数
+		data.handler(fn.apply(0, data.args), data.element, data)
 	}
-
-	//生成求值函数与
-	//视图刷新函数
-
-	function parseExpr(code, scopes, data) {
-		var dataType = data.type
-		var name = "vm" + expose;
-		var prefix = "var " + data.value + " = " + name + "." + data.value;
-		data.args = [scopes];
-		//绑定类型
-		if (dataType === 'click') {
-			code = 'click'
-			code = code.replace("(", ".call(this,");
-			code = "\nreturn " + code + ";" //IE全家 Function("return ")出错，需要Function("return ;")
-			var lastIndex = code.lastIndexOf("\nreturn")
-			var header = code.slice(0, lastIndex)
-			var footer = code.slice(lastIndex)
-			code = header + "\nif(MVVM.openComputedCollect) return ;" + footer;
-			var fn = Function.apply(noop, [name].concat("'use strict';\n" + prefix + ";" + code))
-		} else {
-			var code = "\nreturn " + data.value + ";";
-			var fn = Function.apply(noop, [name].concat("'use strict';\n" + prefix + ";" + code))
-		}
-		//生成求值函数
-		data.evaluator = fn;
-	}
-
-	/*********************************************************************
-	 *                         依赖收集与触发                             *
-	 **********************************************************************/
-
-	function registerSubscriber(data) {
-		Registry[expose] = data //暴光此函数,方便collectSubscribers收集
-		MVVM.openComputedCollect = true //排除事件处理函数
-		var fn = data.evaluator
-		if (fn) { //如果是求值函数
-			data.handler(fn.apply(0, data.args), data.element, data)
-		}
-		MVVM.openComputedCollect = false
-		delete Registry[expose]
-	}
+	MVVM.openComputedCollect = false
+	delete Registry[expose]
+}
 
 var bindingHandlers = {
 	css: function(data, vmodel) {

@@ -6,6 +6,7 @@
     <script src="jQuery.js"></script>
     <script src="Observer.js"></script>
     <script src="Core.js"></script>
+    <script src="Template.js"></script>
     <script src="Collection.js"></script>
 </head>
 <body>
@@ -18,36 +19,14 @@
 <script type="text/javascript">
 
     var mm = MVVM.define("box", function(vm) {
-        vm.array = ["1", "2", "3", "4"]
-        vm.del = function() {
-            this.$vmodel.$remove()
+        vm.w = 150;
+        vm.click = function() {
+            vm.w = parseFloat(vm.w) + 10;
         }
-        "push,unshift,remove,ensure".replace(/\w+/g, function(method) {
-            vm[method] = function(e) {
-                if (this.value && e.which == 13) { //this为input元素
-                    vm.array[method](this.value);
-                    this.value = "";
-                }
-            }
-        })
-
-        vm.removeAt = function(e) {
-            if (isFinite(this.value) && e.which == 13) { //this为input元素
-                var a = ~~this.value
-                vm.array.removeAt(a)
-                this.value = "";
-            }
-        }
-        "pop,shift,sort,reverse".replace(/\w+/g, function(method) {
-            vm[method] = function(e) {
-                vm.array[method]();
-            }
-        })
     })
 
-
     // //节点扫描,执行绑定
-  //  MVVM.scanTag();
+    MVVM.scan(document.getElementById('box'));
 
     setTimeout(function(){
         // console.log(mm)
