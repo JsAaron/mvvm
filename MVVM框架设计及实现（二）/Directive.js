@@ -79,55 +79,79 @@ function scanNodes(parent, vmodels) {
 function scanText(textNode, vmodels) {
     var bindings = [],
         tokens = tokenize(textNode.data);
-
+    console.log(tokens)
 }
 
 
-//=====================================================
-//              解析{{}}数据
+//====================================================================
+//              解析{{}}数据，V2版本排除管道过滤符的处理
 //      data =  "哈哈 {{ w }} x {{ h }} y {{z}} 呵呵"
 //      一个文本节点可能有多个插值表达式，这样的格式需要转化成
 //      词法分析器
 //          tkoens 
-//      代码经过词法分析后就得到了一个Token序列，紧接着拿Token序列去其他事情
-//======================================================
-var openChar = '{{',
-    endChar = '}}';
+//      代码经过词法分析后就得到了一个Token序列，紧接着拿Token序列去其他事情   
+//      
+//      tokens [
+//          {
+//              expr : true/false 是否为表达式
+//              value: 值  
+//          },
+//          ...............
+//      ]     
+//===========================================================================
+var openTag = '{{',
+    closeTag = '}}';
 
-function tokenize(data) {
-    var tokens = []; //保存分解序列
-    var value;
-    var start  = 0
-    var leftstop,rigthstop;
+function tokenize(str) {
+    var tokens = [],
+        value,
+        start = 0,
+        stop; 
 
-    //左边界
-    if (leftstop = data.indexOf(openChar, start)) {
-        if (value = data.slice(start, leftstop)) { 
+    do {
+        //扫描是不是开始{{,那么意味着前前面还有数据
+        stop = str.indexOf(openTag, start)
+        if (stop === -1) {
+            //意味着搜索到了末尾
+            break
+        }
+        //获取到{{左边的文本,保存
+        value = str.slice(start, stop)
+        if (value) { 
             tokens.push({
                 value : value,
                 expr  : false
             })
         }
-    }
 
-    //右边界
-    if (rigthstop = data.lastIndexOf(endChar)) {
-        if (value = data.slice(rigthstop + endChar.length, data.length)) {
+        //插值表达式的处理
+        start = stop + openTag.length
+        stop = str.indexOf(closeTag, start)
+        if (stop === -1) {
+            break
+        }
+        value = str.slice(start, stop)
+        if (value) { //处理{{ }}插值表达式
             tokens.push({
                 value : value,
-                expr  : false
+                expr  : true
             })
         }
+        //开始下一次检测
+        start = stop + closeTag.length;
+    } while (1) 
+
+
+    value = str.slice(start)
+    if (value) { //}} 右边的文本
+        tokens.push({
+            value : value,
+            expr  : false
+        })
     }
 
-    //新的数据
-    var data = data.slice(leftstop, rigthstop + endChar.length)
-
-
-    console.log(tokens,data)
-
+    return tokens;
 }
-
 
 
 //执行绑定

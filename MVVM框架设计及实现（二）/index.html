@@ -15,7 +15,7 @@
 
 <div id='box' ao-controller="box">
     <div id='aa-attr' style="background: #a9ea00;width:100px;height:100px;" ao-css-width="w" ao-click='click' ></div>
-    <p> 我们 {{ w }} x {{ h }} z {{p}} 哈哈  </p>
+    <p> 我们 {{ w }} 的 {{ h }} 额 {{ z| truncate(2)}} 哈哈  </p>
 </div>
 
 <script type="text/javascript">
