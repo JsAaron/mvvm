@@ -80,20 +80,51 @@ function scanText(textNode, vmodels) {
     var bindings = [],
         tokens = tokenize(textNode.data);
 
-
 }
+
 
 //=====================================================
 //              解析{{}}数据
-//         {{ w }} x {{ h }} z {{p}}
+//      data =  "哈哈 {{ w }} x {{ h }} y {{z}} 呵呵"
 //      一个文本节点可能有多个插值表达式，这样的格式需要转化成
 //      词法分析器
 //          tkoens 
 //      代码经过词法分析后就得到了一个Token序列，紧接着拿Token序列去其他事情
 //======================================================
-function tokenize(data) {
+var openChar = '{{',
+    endChar = '}}';
 
-    console.log(data)
+function tokenize(data) {
+    var tokens = []; //保存分解序列
+    var value;
+    var start  = 0
+    var leftstop,rigthstop;
+
+    //左边界
+    if (leftstop = data.indexOf(openChar, start)) {
+        if (value = data.slice(start, leftstop)) { 
+            tokens.push({
+                value : value,
+                expr  : false
+            })
+        }
+    }
+
+    //右边界
+    if (rigthstop = data.lastIndexOf(endChar)) {
+        if (value = data.slice(rigthstop + endChar.length, data.length)) {
+            tokens.push({
+                value : value,
+                expr  : false
+            })
+        }
+    }
+
+    //新的数据
+    var data = data.slice(leftstop, rigthstop + endChar.length)
+
+
+    console.log(tokens,data)
 
 }
 
