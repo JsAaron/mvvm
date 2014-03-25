@@ -35,11 +35,11 @@ function scanAttrNodes(element, vmodels) {
                 var type = match[1];
                 var param = match[2] || "";
                 var binding = {
-                    'type': type,
-                    'param': param,
-                    'element': element,
-                    'name': match[0],
-                    'value': attr.value
+                    'type'    : type,
+                    'param'   : param,
+                    'element' : element,
+                    'name'    : match[0],
+                    'value'   : attr.value
                 }
                 bindings.push(binding)
             }
@@ -48,7 +48,7 @@ function scanAttrNodes(element, vmodels) {
 
     //如果有绑定
     if (bindings.length) {
-        executeBindings(bindings, element);
+        executeBindings(bindings, vmodels);
     }
 
     scanNodes(element, vmodels) //扫描子孙元素

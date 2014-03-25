@@ -14,16 +14,16 @@
 <body>
 
 <div id='box' ao-controller="box">
-    <div id='aa-attr' style="background: #a9ea00;width:100px;height:100px;" ao-css-width="w" ao-click='click' ></div>
-    <p> 我们 {{ w }} 的 {{ h }} 额 {{ z }} 哈哈  </p>
+    <div style=" background: #a9ea00;" ao-css-width="w" ao-css-height="h" ao-click='click' ></div>
+    <p> 图片的尺寸 {{ w }} * {{ h }} {{ t }}  </p>
 </div>
 
 <script type="text/javascript">
 
     var mm = MVVM.define("box", function(vm) {
         vm.w = 150;
-        vm.h = '测试'
-        vm.z ="可以"
+        vm.h = 150;
+        vm.t ="简单测试"
         vm.click = function() {
             vm.w = parseFloat(vm.w) + 10;
         }
@@ -31,10 +31,6 @@
 
     // //节点扫描,执行绑定
     MVVM.scan(document.getElementById('box'));
-
-    setTimeout(function(){
-        // console.log(mm)
-    },100)
 
 
 </script>
