@@ -14,6 +14,7 @@ var expose = Date.now();
 var subscribers = 'aaron-' + expose;
 var stopRepeatAssign = false;
 var rchecktype = /^(?:array|object)$/i; //判断当前的类型只能是数组或者对象
+var documentFragment = document.createDocumentFragment();
 
 function noop() {}
 
@@ -281,7 +282,11 @@ var bindingExecutors = {
 		data.evaluator = data.handler = noop
 	},
 	text: function(val, elem, data) {
-		$(elem).text(val)
+		if (data.nodeType === 3) {
+			data.node.data = val
+		} else {
+			$(elem).text(val)
+		}
 	}
 }
 

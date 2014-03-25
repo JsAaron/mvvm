@@ -35,11 +35,11 @@ function scanAttrNodes(element, vmodels) {
                 var type = match[1];
                 var param = match[2] || "";
                 var binding = {
-                    'type'    : type,
-                    'param'   : param,
-                    'element' : element,
-                    'name'    : match[0],
-                    'value'   : attr.value
+                    'type': type,
+                    'param': param,
+                    'element': element,
+                    'name': match[0],
+                    'value': attr.value
                 }
                 bindings.push(binding)
             }
@@ -75,13 +75,32 @@ function scanNodes(parent, vmodels) {
     }
 }
 
-//扫描文本节点
+//==================================================
+//              扫描文本节点
+//         将分解的序列放入文档碎片          
+//==================================================        
 function scanText(textNode, vmodels) {
     var bindings = [],
         tokens = tokenize(textNode.data);
-    console.log(tokens)
-}
 
+    if (tokens.length) {
+        for (var i = 0, token; token = tokens[i++];) {
+            var node = document.createTextNode(token.value) //将文本转换为文本节点，并替换原来的文本节点
+            if (token.expr) {
+                var binding = {
+                    type     : "text",
+                    node     : node,
+                    nodeType : 3,
+                    value    : token.value
+                }
+                bindings.push(binding) //收集带有插值表达式的文本
+            }
+            documentFragment.appendChild(node)
+        }
+        textNode.parentNode.replaceChild(documentFragment, textNode)
+        executeBindings(bindings, vmodels)
+    }
+}
 
 //====================================================================
 //              解析{{}}数据，V2版本排除管道过滤符的处理
@@ -106,7 +125,7 @@ function tokenize(str) {
     var tokens = [],
         value,
         start = 0,
-        stop; 
+        stop;
 
     do {
         //扫描是不是开始{{,那么意味着前前面还有数据
@@ -117,10 +136,10 @@ function tokenize(str) {
         }
         //获取到{{左边的文本,保存
         value = str.slice(start, stop)
-        if (value) { 
+        if (value) {
             tokens.push({
-                value : value,
-                expr  : false
+                value: value,
+                expr: false
             })
         }
 
@@ -133,20 +152,20 @@ function tokenize(str) {
         value = str.slice(start, stop)
         if (value) { //处理{{ }}插值表达式
             tokens.push({
-                value : value,
-                expr  : true
+                value: value,
+                expr: true
             })
         }
         //开始下一次检测
         start = stop + closeTag.length;
-    } while (1) 
+    } while (1)
 
 
     value = str.slice(start)
     if (value) { //}} 右边的文本
         tokens.push({
-            value : value,
-            expr  : false
+            value: value,
+            expr: false
         })
     }
 

@@ -15,13 +15,15 @@
 
 <div id='box' ao-controller="box">
     <div id='aa-attr' style="background: #a9ea00;width:100px;height:100px;" ao-css-width="w" ao-click='click' ></div>
-    <p> 我们 {{ w }} 的 {{ h }} 额 {{ z| truncate(2)}} 哈哈  </p>
+    <p> 我们 {{ w }} 的 {{ h }} 额 {{ z }} 哈哈  </p>
 </div>
 
 <script type="text/javascript">
 
     var mm = MVVM.define("box", function(vm) {
         vm.w = 150;
+        vm.h = '测试'
+        vm.z ="可以"
         vm.click = function() {
             vm.w = parseFloat(vm.w) + 10;
         }
