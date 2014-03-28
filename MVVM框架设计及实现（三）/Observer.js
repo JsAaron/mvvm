@@ -5,13 +5,7 @@
 *          	 github:https://github.com/JsAaron/aaObserver
 *          	 blog:http://www.cnblogs.com/aaronjs/
  *****************************************************************/
-;(function(O) {
-	if (typeof module === "object" && typeof require === "function") {
-		module.exports.aaObserver = O;
-	} else {
-		this.aaObserver = O;
-	}
-})(function() {
+Aaron.register('Observer', function() {
 
 	var slice = Array.prototype.slice,
 		nativeForEach = Array.prototype.forEach;
@@ -85,5 +79,7 @@
 		this.one = one;
 		return this;
 	};
-}());
+});
+
+
 
