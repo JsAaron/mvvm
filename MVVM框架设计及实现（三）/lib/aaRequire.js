@@ -9,13 +9,35 @@ Aaron = {};
 	Aaron.use      = r.require;
 	Aaron.register = r.define;
 })(function() {
+
 	var objproto = Object.prototype,
-		objtoString = objproto.toString,
-		arrproto = Array.prototype,
+		objtoString   = objproto.toString,
+		arrproto      = Array.prototype,
 		nativeForEach = arrproto.forEach,
-		modules = {},
-		pushStack = {};
-		
+		modules       = {},
+		pushStack     = {};
+
+	function each(obj, callback, context) {
+		if (obj == null) return;
+		//如果支持本地forEach方法,并且是函数
+		if (nativeForEach && obj.forEach === nativeForEach) {
+			obj.forEach(callback, context);
+		} else if (obj.length === +obj.length) {
+			//for循环迭代
+			for (var i = 0, l = obj.length; i < l; i++) {
+				if (callback.call(context, obj[i], i, obj) === breaker) return;
+			}
+		}
+	};
+
+	function isFunction(it) {
+		return objtoString.call(it) === '[object Function]';
+	}
+
+	function isArray(it) {
+		return objtoString.call(it) === '[object Array]';
+	}
+
 	//导入模块
 	var exp = {
 		require: function(id, callback) {
@@ -51,11 +73,11 @@ Aaron = {};
 			//存在依赖导入
 			if (arguments.length > 2) {
 				modules[id] = {
-					id          : id,
-					deps        : deps,
-					factory     : factory
- 				};
- 				//后加载
+					id: id,
+					deps: deps,
+					factory: factory
+				};
+				//后加载
 				post && exp.require(id, function(exp) {
 					post(exp)
 				})
@@ -69,27 +91,6 @@ Aaron = {};
 		}
 	}
 
-	function each(obj, callback, context) {
-		if (obj == null) return;
-		//如果支持本地forEach方法,并且是函数
-		if (nativeForEach && obj.forEach === nativeForEach) {
-			obj.forEach(callback, context);
-		} else if (obj.length === +obj.length) {
-			//for循环迭代
-			for (var i = 0, l = obj.length; i < l; i++) {
-				if (callback.call(context, obj[i], i, obj) === breaker) return;
-			}
-		}
-	};
-
-	function isFunction(it) {
-		return objtoString.call(it) === '[object Function]';
-	}
-
-	function isArray(it) {
-		return objtoString.call(it) === '[object Array]';
-	}
-
 	//解析依赖关系
 	function parseDeps(module) {
 		var deps = module['deps'],
@@ -101,7 +102,7 @@ Aaron = {};
 	}
 
 	function build(module) {
-		var depsList,existMod,
+		var depsList, existMod,
 			factory = module['factory'],
 			id = module['id'];
 
@@ -132,12 +133,12 @@ Aaron = {};
 	//解析require模块
 	function makeRequire(ids, callback) {
 		var r = ids.length,
-			shim = [];
-		while (r--) {
-			shim.unshift(build(modules[ids[r]]));
-		}
+			shim = {};
+		each(ids, function(name) {
+			shim[name] = build(modules[name])
+		})
 		if (callback) {
-			callback.apply(null, shim);
+			callback.call(null, shim);
 		} else {
 			shim = null;
 		}
