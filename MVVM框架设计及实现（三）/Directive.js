@@ -54,9 +54,9 @@ Aaron.register('Directive', [
 
 
 	/**
-	 * 构建指定绑定
+	 * 创建指定的绑定处理句柄
 	 */
-	Directive.bindingHandlers = function(type, value, node, vm) {
+	Directive.createHandlers = function(type, value, node, vm) {
 		var handlers = this.checkHandlers(type)
 		if (!handlers) {
 			return;

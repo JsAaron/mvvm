@@ -102,7 +102,7 @@ Aaron.register('ViewModel', [
 				if (match = attr.name.match(matchAttr)) { //匹配ao-开头指令
 					type = match[1];
 					//如果能找到对应的指令处理
-					if (directive = Directive.bindingHandlers(type, attr.value, node, this)) {
+					if (directive = Directive.createHandlers(type, attr.value, node, this)) {
 						this.bindDirective(directive)
 					}
 				}
