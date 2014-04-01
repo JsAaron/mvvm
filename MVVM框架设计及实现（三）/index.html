@@ -7,43 +7,35 @@
     <script src="lib/jQuery.js"></script>
     <script src="lib/underscore.js"></script>
     
-    <script src="directive/Attr-parser.js"></script>
-    <script src="directive/Exp-parser.js"></script>
-    <script src="directive/Text-parser.js"></script>
-    <script src="directive/Directive.js"></script>
+    <!-- 指令处理合集 -->
+    <script src="Directive.js"></script>
+    <script src="directive/on.js"></script>
 
     <script src="Config.js"></script>
     <script src="Util.js"></script>
-    <script src="ViewModel.js"></script>
     <script src="Compiler.js"></script>
+    <script src="ViewModel.js"></script>
 </head>
 <body>
 
 <div id='box' ao-controller="box">
-    <div style=" background: #a9ea00;" ao-css-width="w" ao-css-height="h" ao-click='click' ></div>
+    <div style=" background: #a9ea00;" ao-css-width="w" ao-css-height="h" ao-on='click' ></div>
     <p> 图片的尺寸 {{ w }} * {{ h }} {{ t }}  </p>
 </div>
 
 <script type="text/javascript">
 
+
    var aa = Aaron.define("box", {
-       w: 150,
-       h: 150,
-       t: "简单测试",
-       click: function() {
+         w  : 150,
+         h  : 150,
+         t  : "简单测试",
+         click: function() {
            console.log('click', this)
-       }
+         }
    })
 
-   //节点扫描,执行绑定
-   Aaron.binding('box');
-
-
-
-
-    // // //节点扫描,执行绑定
-    // MVVM.scan(document.getElementById('box'));
-
+   console.log(aa)
 
 </script>
 </body>

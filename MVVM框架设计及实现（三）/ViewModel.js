@@ -14,17 +14,27 @@ Aaron.register('ViewModel', [
 	'Config',
 	'Compiler'
 ], function(Util, Config, Compiler) {
-	
+
 	var vmCache     = {}; //缓存所有vm对象
 	var interpolate = /\{\{(.*?)\}\}/; //匹配{{任何}}
 	var slice       = Util.slice;
 	var matchAttr   = /ao-(\w+)-?(.*)/;//匹配属性 ao-css-width
 
-	//编译模型对象
+	//模型对象
 	var ViewModel = function(name, options) {
+
+		//编译转化后的set get模型对象
 		this.vm = new Compiler(name, options);
+
 		this.name = name;
-		return vmCache[name] = this;
+
+		//查找到根节点
+		this.el = this.rootElement(name);
+
+		//建立绑定关系
+		this.compile(this.el)
+
+		vmCache[name] = this;
 	};
 
 	//定义模型接口
@@ -42,10 +52,24 @@ Aaron.register('ViewModel', [
 		}
 	}
 
-	var CompilerProto = ViewModel.prototype;
 
+	var ViewModelProto = ViewModel.prototype;
 
-	CompilerProto.compile = function(node) {
+	/**
+	 * 找到根节点
+	 * @param  {[type]} name [description]
+	 * @return {[type]}      [description]
+	 */
+	ViewModelProto.rootElement = function(name){
+		return document.getElementById(name)
+	}
+
+	/**
+	 * 开始建立绑定关系
+	 * @param  {[type]} node [description]
+	 * @return {[type]}      [description]
+	 */
+	ViewModelProto.compile = function(node) {
 		var nodeType = node.nodeType
 		if (nodeType === 1) {
 			this.compileElement(node)
@@ -64,7 +88,7 @@ Aaron.register('ViewModel', [
 	 * 解析元素节点
 	 * @return {[type]} [description]
 	 */
-	CompilerProto.compileElement = function(node) {
+	ViewModelProto.compileElement = function(node) {
 		//保证这个节点上有属性
 		if (node.hasAttributes()) {
 			var prefix = Config.prefix,
@@ -84,7 +108,7 @@ Aaron.register('ViewModel', [
 	 * 解析文本节点
 	 * @return {[type]} [description]
 	 */
-	CompilerProto.compileTextNode = function(node) {
+	ViewModelProto.compileTextNode = function(node) {
 		console.log(node)
 	}
 
@@ -200,9 +224,10 @@ Aaron.register('ViewModel', [
 	// 		}
 	// 	}
 
+
 	return {
-		'define': ViewModel.define,
-		'binding': ViewModel.binding
+		'define'  : ViewModel.define,
+		'binding' : ViewModel.binding
 	}
 }, function(expose) {
 	//初始化模块
