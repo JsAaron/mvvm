@@ -12,8 +12,9 @@
 Aaron.register('ViewModel', [
 	'Util',
 	'Config',
+	'Directive',
 	'Compiler'
-], function(Util, Config, Compiler) {
+],function(Util, Config, Directive, Compiler) {
 
 	var vmCache     = {}; //缓存所有vm对象
 	var interpolate = /\{\{(.*?)\}\}/; //匹配{{任何}}
@@ -24,7 +25,7 @@ Aaron.register('ViewModel', [
 	var ViewModel = function(name, options) {
 
 		//编译转化后的set get模型对象
-		this.vm = new Compiler(name, options);
+		this.compiler = new Compiler(name, options);
 
 		this.name = name;
 
@@ -93,12 +94,17 @@ Aaron.register('ViewModel', [
 		if (node.hasAttributes()) {
 			var prefix = Config.prefix,
 				attrs = slice.call(node.attributes),
-			i = attrs.length, attr, match, type;
-			while (i--) {//多个属性
+				i = attrs.length,
+				attr, match, type, directive;
+
+			while (i--) { //多个属性
 				attr = attrs[i];
-				if (match = attr.name.match(matchAttr)) { //匹配指令
-					type = match[1]
-					console.log(type)
+				if (match = attr.name.match(matchAttr)) { //匹配ao-开头指令
+					type = match[1];
+					//如果能找到对应的指令处理
+					if (directive = Directive.bindingHandlers(type, attr.value, node, this)) {
+						this.bindDirective(directive)
+					}
 				}
 			}
 		}
@@ -109,8 +115,21 @@ Aaron.register('ViewModel', [
 	 * @return {[type]} [description]
 	 */
 	ViewModelProto.compileTextNode = function(node) {
-		console.log(node)
+		// console.log(node)
 	}
+
+
+	/**
+	 * 绑定指令
+	 * @return {[type]} [description]
+	 */
+	ViewModelProto.bindDirective = function(directive){
+
+		if (!directive) return;
+
+		console.log(directive)
+	}
+
 
 
 
