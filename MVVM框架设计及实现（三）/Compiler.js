@@ -5,73 +5,103 @@
 //	2 自定义事件能力
 //================================================
 Aaron.register('Compiler', [
-		'Util'
-	], function(Util) {
+		'Utils',
+		'Emitter',
+		'Binding'
+	], function(Utils,Emitter,Binding) {
 
-	var typeOf       = Util.typeOf;
-	var isEqual      = Util.isEqual;
+	var typeOf       = Utils.typeOf;
+	var isEqual      = Utils.isEqual;
 	var rchecktype   = /^(?:array|object)$/i; //判断当前的类型只能是数组或者对象
-	var withValue    = Util.withValue;
-	var defProtectes = Util.defProtectes;
+	var withValue    = Utils.withValue;
+	var defProtectes = Utils.defProtectes;
 
-	function Compiler(name, collectscope) {
+	function Compiler(vm, name, options) {
 
-		var self = this;
+		var compiler = this;
 
+		compiler.options = options;
+
+		//模型对象
+		compiler.vm = vm;
 		//原始模型数据
-		this.originalModel = {}, 
-		//监控属性,需要转化成set get访问控制器
-		this.accessingProperties = {}, 
+		compiler.originals = {};
 		//普通属性
-		this.normalProperties = {};
+		compiler.commons = {};
+		//监控属性,需要转化成set get访问控制器
+		compiler.accessors  = {}, 
+		//编译绑定
+		compiler.bindings = Utils.hash()
+
+		//=====================================================
+		//	
+		//		vm 设置
+		//	
+		//======================================================
+		vm.$ = {}
+		vm.$options = options
+		vm.$event = null
 
 		//解析对应的定义
-		_.each(collectscope, function(val, name) {
-			this.parseModel(name, val);
-		}, this)
+		_.each(options, function(val, name) {
+			compiler.resolveModel(name, val);
+		})
 
 		//转成访问控制器
-		defProtectes(this, withValue(this.accessingProperties));
+		defProtectes(compiler, withValue(compiler.accessingProperties));
 
 		//没有转化的函数,混入到新的vm对象中
-		_.each(this.normalProperties, function(val, name) {
-			this[name] = val
-		}, this)
+		_.each(compiler.normalProperties, function(val, name) {
+			compiler[name] = val
+		})
 
-		this.id = Util.UUID();
-		this[Aaron.subscribers] = []
 
-		return this;
+		compiler.id = Utils.UUID();
+
+		compiler[Aaron.subscribers] = []
+
+		console.log(compiler)
+
+		return compiler;
 	}
+
 
 	var VMProto = Compiler.prototype;
 
 
-	//解析模型,转化成对应的set/get处理方法
-	VMProto.parseModel = function(name, val) {
+	//=================================================
+	//
+	//	解析模型,转化成对应的set/get处理方法
+	//	
+	//	1 监控属性
+	//	2 计算属性  针对监控属性的加强
+	//
+	//==================================================
+	VMProto.resolveModel = function(name, val) {
 
-		var self = this;
+		var compiler = this;
 
 		//缓存原始值
-		this.originalModel[name] = val
+		compiler.originals[name] = val
 
 		//得到值类型
 		var valueType = typeOf(val);
 
 		//如果是函数，不用监控，意味着这是事件回调句柄
 		if (valueType === 'function') {
-			return this.normalProperties[name] = val
+			return compiler.commons[name] = val
 		}
+
 		//如果值类型是对象,并且有get方法,为计算属性
 		if (valueType === "object" && typeof val.get === "function" && Object.keys(val).length <= 2) {
 
 		} else {
-			//否则为监控属性
-			var accessor = this.createAccessingProperties(name, val, valueType);
+			//转化监控属性
+			var accessor = compiler.setupObserver(name, val, valueType);
 		}
 
 		//保存监控处理
-		this.accessingProperties[name] = accessor;
+		compiler.accessors[name] = accessor;
 	}
 
 	//==================================================
@@ -80,7 +110,14 @@ Aaron.register('Compiler', [
 	//	2 数组结构
 	//	3 对象结构
 	//====================================================
-	VMProto.createAccessingProperties = function(name, val, valueType) {
+	VMProto.setupObserver = function(name, val, valueType) {
+
+		var compiler = this,
+			bindings = compiler.bindings,
+			options = compiler.options,
+			observer = compiler.observer = new Emitter(compiler.vm)
+
+
 
 		var self = this;
 
@@ -118,7 +155,7 @@ Aaron.register('Compiler', [
 			//复杂结构
 		} else {
 			//普通的基本类型
-			self.originalModel[name] = val;
+			self.originals[name] = val;
 		}
 		
 		return accessor;

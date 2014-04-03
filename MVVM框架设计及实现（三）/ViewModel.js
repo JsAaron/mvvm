@@ -9,23 +9,24 @@
  *          	Avalon源码:https://github.com/RubyLouvre/avalon
  *       DOM的处理前期全采用jQuery代替
  *****************************************************************/
+
 Aaron.register('ViewModel', [
-	'Util',
+	'Utils',
 	'Config',
 	'Directive',
 	'Compiler'
-],function(Util, Config, Directive, Compiler) {
+],function(Utils, Config, Directive, Compiler) {
 
 	var vmCache     = {}; //缓存所有vm对象
 	var interpolate = /\{\{(.*?)\}\}/; //匹配{{任何}}
-	var slice       = Util.slice;
+	var slice       = Utils.slice;
 	var matchAttr   = /ao-(\w+)-?(.*)/;//匹配属性 ao-css-width
 
 	//模型对象
 	var ViewModel = function(name, options) {
 
 		//编译转化后的set get模型对象
-		this.compiler = new Compiler(name, options);
+		this.compiler = new Compiler(this, name, options);
 
 		this.name = name;
 
@@ -127,7 +128,7 @@ Aaron.register('ViewModel', [
 
 		if (!directive) return;
 
-		console.log(directive)
+		// console.log(directive)
 	}
 
 
