@@ -118,7 +118,6 @@ Aaron.register('Compiler', [
 			observer = compiler.observer = new Emitter(compiler.vm)
 
 
-
 		var self = this;
 
 		var set = function() {
@@ -138,7 +137,7 @@ Aaron.register('Compiler', [
 			return accessor.$vmodel || preValue //返回需要获取的值		
 		}
 
-		var accessor = function(newValue) {
+		function accessor(newValue) {
 			var vmodel   = self.watchProperties.vmodel
 			var preValue = self.originalModel[name];
 			if (arguments.length) {
